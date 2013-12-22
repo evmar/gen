@@ -21,9 +21,9 @@ type Params struct {
 	Prefix string
 	// Package is the package name for the output.
 	Package string
-	// Token is the name of the type of tokens passed to the
+	// TokenType is the name of the type of tokens passed to the
 	// generation function.
-	Token string
+	TokenType string
 	// Trace specifies whether to log the parse as it happens.
 	Trace bool
 }
@@ -106,7 +106,13 @@ func processDecl(d *ast.GenDecl, fset *token.FileSet, params *Params) {
 					warn(fset, vs.Names[i].Pos(), "expected string")
 					continue
 				}
-				params.Prefix = lit.Value[1:len(lit.Value)-1]
+				params.Prefix = lit.Value[1 : len(lit.Value)-1]
+			case "lrTokenType":
+				if lit.Kind != token.STRING {
+					warn(fset, vs.Names[i].Pos(), "expected string")
+					continue
+				}
+				params.TokenType = lit.Value[1 : len(lit.Value)-1]
 			default:
 				warn(fset, vs.Names[i].Pos(), "unknown parameter")
 			}
@@ -155,9 +161,9 @@ func Parse(path string) (*Params, []*Rule, error) {
 	}
 
 	params := &Params{
-		Package: f.Name.Name,
-		Token:   "Tok",
-		Trace:   false,
+		Package:   f.Name.Name,
+		TokenType: "Token",
+		Trace:     false,
 	}
 	var rules []*Rule
 	ast.Inspect(f, func(an ast.Node) bool {

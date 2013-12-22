@@ -47,7 +47,7 @@ func $NewParser() *$Parser {
 
 // Parse processes one token, returning true on a complete parse and
 // false when more input is expected.
-func (p *$Parser) Parse(tok *{{.Token}}) (bool, error) {
+func (p *$Parser) Parse(tok *{{.TokenType}}) (bool, error) {
 	for {
 		action, ok := p.actions[p.stack[len(p.stack)-1]][tok.Id()]
 		{{if .Trace}}
