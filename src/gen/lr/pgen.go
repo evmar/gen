@@ -297,5 +297,9 @@ func Main(infile string, verbose bool) ([]byte, error) {
 
 	writeTables(w, params.Prefix, g, actions)
 
-	return w.Fmt()
+	code, err := w.Fmt()
+	if err != nil {
+		return nil, fmt.Errorf("error formatting code: %s\ncode: %s\n", err, w.Raw())
+	}
+	return code, nil
 }

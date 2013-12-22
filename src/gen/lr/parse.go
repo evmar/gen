@@ -5,10 +5,12 @@ package lr
 
 import (
 	"bytes"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"os"
 	"strings"
 )
 
@@ -24,6 +26,10 @@ type Params struct {
 	Token string
 	// Trace specifies whether to log the parse as it happens.
 	Trace bool
+}
+
+func warn(fset *token.FileSet, pos token.Pos, message string) {
+	fmt.Fprintf(os.Stderr, "%s: %s\n", fset.Position(pos), message)
 }
 
 // parsePattern parses a pattern string, which looks like
@@ -76,6 +82,38 @@ func astStr(fset *token.FileSet, n interface{}) string {
 	return string(buf.Bytes())
 }
 
+func processDecl(d *ast.GenDecl, fset *token.FileSet, params *Params) {
+	if d.Tok != token.CONST {
+		warn(fset, d.Pos(), "unused decl")
+		return
+	}
+
+	for _, spec := range d.Specs {
+		vs, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			warn(fset, spec.Pos(), "unused spec")
+			continue
+		}
+		for i := range vs.Names {
+			lit, ok := vs.Values[i].(*ast.BasicLit)
+			if !ok {
+				warn(fset, vs.Values[i].Pos(), "expected literal value")
+			}
+
+			switch vs.Names[i].Name {
+			case "lrPrefix":
+				if lit.Kind != token.STRING {
+					warn(fset, vs.Names[i].Pos(), "expected string")
+					continue
+				}
+				params.Prefix = lit.Value[1:len(lit.Value)-1]
+			default:
+				warn(fset, vs.Names[i].Pos(), "unknown parameter")
+			}
+		}
+	}
+}
+
 // processFunction analyzes a single func ast, extracting rules (and code)
 // from it.
 func processFunction(fn *ast.FuncDecl, fset *token.FileSet, rules *[]*Rule) {
@@ -117,7 +155,6 @@ func Parse(path string) (*Params, []*Rule, error) {
 	}
 
 	params := &Params{
-		Prefix:  "lr",
 		Package: f.Name.Name,
 		Token:   "Tok",
 		Trace:   false,
@@ -125,6 +162,9 @@ func Parse(path string) (*Params, []*Rule, error) {
 	var rules []*Rule
 	ast.Inspect(f, func(an ast.Node) bool {
 		switch n := an.(type) {
+		case *ast.GenDecl:
+			processDecl(n, fset, params)
+			return false // don't examine children
 		case *ast.FuncDecl:
 			processFunction(n, fset, &rules)
 			return false // don't examine children

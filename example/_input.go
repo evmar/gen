@@ -1,4 +1,6 @@
-package lr
+package example
+
+const lrPrefix = "ex"
 
 func start() *Grammar {
 	syntax(`A=rules`)
