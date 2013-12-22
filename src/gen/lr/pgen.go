@@ -201,7 +201,7 @@ func ComputeActions(grammar *Grammar, trace Logger) ActionTable {
 	return allActions
 }
 
-func writeTables(w *codegen.Writer, prefix string, grammar *Grammar, table ActionTable) {
+func writeTables(w *codegen.Writer, params *Params, grammar *Grammar, table ActionTable) {
 	types := make(map[string]string)
 	for _, rule := range grammar.rules {
 		types[rule.symbol] = rule.typ
@@ -209,7 +209,7 @@ func writeTables(w *codegen.Writer, prefix string, grammar *Grammar, table Actio
 
 	ruleIds := make(map[*Rule]int)
 
-	w.Linef(`var %sRules = []*%sRule{`, prefix, prefix)
+	w.Linef(`var %sRules = []*%sRule{`, params.Prefix, params.Prefix)
 	for i, rule := range grammar.rules {
 		ruleIds[rule] = i
 		w.Linef(`{%q, %#v,`, rule.symbol, rule.pattern)
@@ -219,7 +219,7 @@ func writeTables(w *codegen.Writer, prefix string, grammar *Grammar, table Actio
 				if varname != "" {
 					typ := types[rule.pattern[j]]
 					if typ == "" {
-						typ = "Tok"
+						typ = params.TokenType
 					}
 					w.Linef("%s := data[%d].(%s)", varname, j, typ)
 				}
@@ -235,7 +235,7 @@ func writeTables(w *codegen.Writer, prefix string, grammar *Grammar, table Actio
 
 	w.Line("")
 
-	w.Linef(`var %sActions = %sActionTable{`, prefix, prefix)
+	w.Linef(`var %sActions = %sActionTable{`, params.Prefix, params.Prefix)
 	for _, state := range table {
 		w.Line(`{`)
 		var keys []string
@@ -295,7 +295,7 @@ func Main(infile string, verbose bool) ([]byte, error) {
 	w.Linef("return p.data[0].(%s)", g.rules[0].typ)
 	w.Line("}")
 
-	writeTables(w, params.Prefix, g, actions)
+	writeTables(w, params, g, actions)
 
 	code, err := w.Fmt()
 	if err != nil {
