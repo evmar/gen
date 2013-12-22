@@ -49,7 +49,7 @@ func $NewParser() *$Parser {
 // false when more input is expected.
 func (p *$Parser) Parse(tok *{{.TokenType}}) (bool, error) {
 	for {
-		action, ok := p.actions[p.stack[len(p.stack)-1]][tok.Id()]
+		action, ok := p.actions[p.stack[len(p.stack)-1]][tok.ParseId()]
 		{{if .Trace}}
 		log.Println("")
 		log.Printf("stack:%v, data:%v\n", p.stack, p.data)
