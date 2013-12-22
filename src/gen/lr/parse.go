@@ -9,7 +9,38 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"strings"
 )
+
+// Params controls parameters to the generation process.
+type Params struct {
+	// Prefix is inserted as a prefix on all types; useful to prevent
+	// inter-file conflicts.
+	Prefix string
+	// Package is the package name for the output.
+	Package string
+	// Token is the name of the type of tokens passed to the
+	// generation function.
+	Token string
+	// Trace specifies whether to log the parse as it happens.
+	Trace bool
+}
+
+// parsePattern parses a pattern string, which looks like
+//   A=expr + B=expr
+// into a list of patterns ["expr", "+", "expr"] and
+// variable names ["A", "", "B"].
+func parsePattern(patternStr string) ([]string, []string) {
+	pattern := strings.Split(patternStr, " ")
+	vars := make([]string, len(pattern))
+	for i, pat := range pattern {
+		if len(pat) > 2 && pat[0] != '\'' && pat[1] == '=' {
+			vars[i] = pat[0:1]
+			pattern[i] = pat[2:]
+		}
+	}
+	return pattern, vars
+}
 
 // isSyntaxCall analyzes an ast.Stmt and returns (true, "...") if the
 // statement is the special call to syntax("...").
@@ -78,21 +109,28 @@ func processFunction(fn *ast.FuncDecl, fset *token.FileSet, rules *[]*Rule) {
 }
 
 // Parse loads a go source file and extracts all the Rules from it.
-func Parse(path string) ([]*Rule, error) {
+func Parse(path string) (*Params, []*Rule, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, 0)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
+	params := &Params{
+		Prefix:  "lr",
+		Package: f.Name.Name,
+		Token:   "Tok",
+		Trace:   false,
+	}
 	var rules []*Rule
 	ast.Inspect(f, func(an ast.Node) bool {
-		if fn, ok := an.(*ast.FuncDecl); ok {
-			processFunction(fn, fset, &rules)
+		switch n := an.(type) {
+		case *ast.FuncDecl:
+			processFunction(n, fset, &rules)
 			return false // don't examine children
 		}
 		return true // visit children
 	})
 
-	return rules, nil
+	return params, rules, nil
 }

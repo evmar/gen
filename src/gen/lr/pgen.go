@@ -261,7 +261,17 @@ func writeTables(w *codegen.Writer, prefix string, grammar *Grammar, table Actio
 	w.Line(`}`)
 }
 
-func generate(rules []*Rule, trace Logger) ([]byte, error) {
+func Main(infile string, verbose bool) ([]byte, error) {
+	var trace Logger
+	if verbose {
+		trace = traceLog
+	}
+
+	params, rules, err := Parse(infile)
+	if err != nil {
+		return nil, err
+	}
+
 	if trace != nil {
 		trace.Println("loaded rule table")
 		for i, rule := range rules {
@@ -276,37 +286,16 @@ func generate(rules []*Rule, trace Logger) ([]byte, error) {
 	// return
 
 	w := &codegen.Writer{}
-	prefix := "lr"
 	tmpl := template.Must(template.New("parse").Parse(
-		strings.Replace(parseTemplate, "$", prefix, -1)))
-	params := Params{
-		Prefix:  "lr",
-		Package: "lr",
-		Token:   "Tok",
-		Trace:   false,
-	}
+		strings.Replace(parseTemplate, "$", params.Prefix, -1)))
 	tmpl.Execute(w, params)
 
 	w.Line("// Result returns the final result of a successful parse.")
-	w.Linef("func (p *%sParser) Result() %s {", prefix, g.rules[0].typ)
+	w.Linef("func (p *%sParser) Result() %s {", params.Prefix, g.rules[0].typ)
 	w.Linef("return p.data[0].(%s)", g.rules[0].typ)
 	w.Line("}")
 
-	writeTables(w, prefix, g, actions)
+	writeTables(w, params.Prefix, g, actions)
 
 	return w.Fmt()
-}
-
-func Main(infile string, verbose bool) ([]byte, error) {
-	rules, err := Parse(infile)
-	if err != nil {
-		return nil, err
-	}
-
-	var trace Logger
-	if verbose {
-		trace = traceLog
-	}
-
-	return generate(rules, trace)
 }
