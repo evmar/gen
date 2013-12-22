@@ -5,6 +5,8 @@ package {{.Package}}
 
 // this file generated, do not edit
 
+{{.Header}}
+
 import (
 	"fmt"
 	{{if .Trace}}"log"{{end}}

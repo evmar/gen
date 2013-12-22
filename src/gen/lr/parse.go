@@ -21,6 +21,8 @@ type Params struct {
 	Prefix string
 	// Package is the package name for the output.
 	Package string
+	// Header is extra code inserted after the import declaration.
+	Header string
 	// TokenType is the name of the type of tokens passed to the
 	// generation function.
 	TokenType string
@@ -96,6 +98,11 @@ func literalString(e ast.Expr, fset *token.FileSet) (string, bool) {
 }
 
 func processDecl(d *ast.GenDecl, fset *token.FileSet, params *Params) {
+	if d.Tok == token.IMPORT {
+		params.Header += astStr(fset, d)
+		return
+	}
+
 	if d.Tok != token.CONST {
 		warn(fset, d.Pos(), "unused decl")
 		return
@@ -170,18 +177,17 @@ func processFunction(fn *ast.FuncDecl, fset *token.FileSet, rules *[]*Rule) {
 }
 
 // Parse loads a go source file and extracts all the Rules from it.
-func Parse(path string) (*Params, []*Rule, error) {
+func Parse(path string) (params *Params, rules []*Rule, err error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, 0)
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	params := &Params{
+	params = &Params{
 		Package:   f.Name.Name,
 		TokenType: "Token",
 	}
-	var rules []*Rule
 	ast.Inspect(f, func(an ast.Node) bool {
 		switch n := an.(type) {
 		case *ast.GenDecl:
@@ -194,5 +200,5 @@ func Parse(path string) (*Params, []*Rule, error) {
 		return true // visit children
 	})
 
-	return params, rules, nil
+	return
 }
