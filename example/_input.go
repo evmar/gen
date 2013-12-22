@@ -1,7 +1,10 @@
 package example
 
-const lrPrefix = "ex"
-const lrTokenType = "ExampleToken"
+const (
+	lrPrefix = "ex"
+	lrTokenType = "ExampleToken"
+	lrTrace = true
+)
 
 func start() *Grammar {
 	syntax(`A=rules`)

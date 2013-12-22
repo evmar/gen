@@ -82,6 +82,19 @@ func astStr(fset *token.FileSet, n interface{}) string {
 	return string(buf.Bytes())
 }
 
+func literalString(e ast.Expr, fset *token.FileSet) (string, bool) {
+	lit, ok := e.(*ast.BasicLit)
+	if !ok {
+		warn(fset, e.Pos(), "expected literal value")
+		return "", false
+	}
+	if lit.Kind != token.STRING {
+		warn(fset, e.Pos(), "expected string")
+		return "", false
+	}
+	return lit.Value[1 : len(lit.Value)-1], true
+}
+
 func processDecl(d *ast.GenDecl, fset *token.FileSet, params *Params) {
 	if d.Tok != token.CONST {
 		warn(fset, d.Pos(), "unused decl")
@@ -95,24 +108,28 @@ func processDecl(d *ast.GenDecl, fset *token.FileSet, params *Params) {
 			continue
 		}
 		for i := range vs.Names {
-			lit, ok := vs.Values[i].(*ast.BasicLit)
-			if !ok {
-				warn(fset, vs.Values[i].Pos(), "expected literal value")
-			}
-
 			switch vs.Names[i].Name {
 			case "lrPrefix":
-				if lit.Kind != token.STRING {
-					warn(fset, vs.Names[i].Pos(), "expected string")
-					continue
+				if str, ok := literalString(vs.Values[i], fset); ok {
+					params.Prefix = str
 				}
-				params.Prefix = lit.Value[1 : len(lit.Value)-1]
 			case "lrTokenType":
-				if lit.Kind != token.STRING {
-					warn(fset, vs.Names[i].Pos(), "expected string")
-					continue
+				if str, ok := literalString(vs.Values[i], fset); ok {
+					params.TokenType = str
 				}
-				params.TokenType = lit.Value[1 : len(lit.Value)-1]
+			case "lrTrace":
+				if ident, ok := vs.Values[i].(*ast.Ident); ok {
+					switch ident.Name {
+					case "true":
+						params.Trace = true
+					case "false":
+						params.Trace = false
+					default:
+						warn(fset, vs.Values[i].Pos(), "expected bool")
+					}
+				} else {
+					warn(fset, vs.Names[i].Pos(), "expected bool")
+				}
 			default:
 				warn(fset, vs.Names[i].Pos(), "unknown parameter")
 			}
@@ -163,7 +180,6 @@ func Parse(path string) (*Params, []*Rule, error) {
 	params := &Params{
 		Package:   f.Name.Name,
 		TokenType: "Token",
-		Trace:     false,
 	}
 	var rules []*Rule
 	ast.Inspect(f, func(an ast.Node) bool {
