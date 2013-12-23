@@ -51,14 +51,15 @@ func $NewParser() *$Parser {
 // false when more input is expected.
 func (p *$Parser) Parse(tok *{{.TokenType}}) (bool, error) {
 	for {
-		action, ok := p.actions[p.stack[len(p.stack)-1]][tok.ParseId()]
 		{{if .Trace}}
 		log.Println("")
 		log.Printf("stack:%v, data:%v\n", p.stack, p.data)
+		log.Printf("tok:%v\n", tok.ParseId())
 		{{end}}
+		action, ok := p.actions[p.stack[len(p.stack)-1]][tok.ParseId()]
 		if !ok {
 			log.Println(p.actions[p.stack[len(p.stack)-1]])
-			return false, fmt.Errorf("unexpected")
+			return false, fmt.Errorf("unexpected token: %v", tok)
 		}
 
 		if action > 0 {

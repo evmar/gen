@@ -156,7 +156,7 @@ func (g *Grammar) First(trace Logger) SymbolMap {
 func (g *Grammar) Follow(first SymbolMap) SymbolMap {
 	follow := make(SymbolMap)
 	init := make(SymbolSet)
-	init.Add("$")  // TODO: better EOF handling.
+	init.Add("EOF")  // TODO: better EOF handling.
 	follow[g.rules[0].symbol] = init
 
 	// TODO: this can be optimized.
