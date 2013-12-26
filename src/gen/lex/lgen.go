@@ -71,12 +71,22 @@ func writeTokenIds(w *codegen.Writer, tokens []*Token) {
 	w.Line(")")
 }
 
-// writeTokenIds writes an array mapping TokenId integers to their
+// writeTokenNames writes an array mapping TokenId integers to their
 // string names.
 func writeTokenNames(w *codegen.Writer, tokens []*Token) {
 	w.Line("var TokNames = []string{")
 	for _, t := range tokens {
 		w.Linef("\"%s\",", t.value)
+	}
+	w.Line("}")
+}
+
+// writeTokenLookup writes a map of string names to token ids.
+// E.g. "eof" => tEOF.
+func writeTokenLookup(w *codegen.Writer, tokens []*Token) {
+	w.Line("var TokIds = map[string]TokenId{")
+	for _, t := range tokens {
+		w.Linef("%q: t%s,", t.value, t.name)
 	}
 	w.Line("}")
 }
@@ -192,6 +202,8 @@ type ByteReader interface {
 	writeTokenIds(w, tokens)
 	w.Line("")
 	writeTokenNames(w, tokens)
+	w.Line("")
+	writeTokenLookup(w, tokens)
 	w.Line("")
 	writeKeywords(w, tokens)
 	w.Line("")
